@@ -11,7 +11,7 @@
     
 如果是用AS开发，把光标放到双引号括起来的字符串上，左侧会出现一个灯泡，可以抽取字符串到strings.xml中。
 
-![示例](http://cl.ly/2B213l3N0w1y/download/5(5WNS7TQUYS601582XBA9D.png))
+![示例](https://github.com/imyyq-star/ExtractAndroidString/blob/master/images/img1.png?raw=true)
 
 当然，抽取的时候需要输入对应的英文，个别英文不好的（比如我），此时就需要打开翻译软件翻译后再填入输入框中。
 
@@ -23,7 +23,7 @@
 有了这样一种工具，在Android开发的时候，就无需考虑字符串的问题了，不用在编码的过程中停下来去抽取字符串到strings.xml中，可以说节省了不少时间。
 
 ##预览
-![示例](http://cl.ly/2B213l3N0w1y/download/5(5WNS7TQUYS601582XBA9D.png))
+![示例](https://github.com/imyyq-star/ExtractAndroidString/blob/master/images/img2.png?raw=true)
 
 
 
