@@ -1,0 +1,2 @@
+# ExtractAndroidString
+抽取Android中java文件和layout文件中的中文字符串到strings.xml中
