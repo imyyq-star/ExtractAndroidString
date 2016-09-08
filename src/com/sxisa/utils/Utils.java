@@ -15,17 +15,24 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Random;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import org.apache.commons.codec.digest.DigestUtils;
 
 import com.alibaba.fastjson.JSON;
 
 public class Utils
 {
-	public static String baiduTranslation(String apiKey, String source)
+	public static String baiduTranslation(String appID, String source)
 	{
+		int salt = new Random().nextInt(10000);
+		StringBuilder md5String = new StringBuilder();
+		md5String.append(appID).append(source).append(salt).append("Dnkcz8Wao_OBRr6lz9I1");
+		String md5 = DigestUtils.md5Hex(md5String.toString());
 		// 翻译后的结果字符串经JSON解析出翻译结果
-		String temps = String.format(C.BAIDU_API, apiKey, source);
+		String temps = String.format(C.BAIDU_API, appID, source, String.valueOf(salt), md5);
 		TranslationResults translationResults = Utils.getJsonParseResult(HTTPRequestUtils.get(temps),
 				TranslationResults.class);
 		if (translationResults != null && translationResults.getTrans_result() != null
