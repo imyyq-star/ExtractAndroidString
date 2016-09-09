@@ -47,58 +47,58 @@ import com.sxisa.utils.Utils;
 public class ExtractStringFrame extends JFrame
 {
 	private static final long serialVersionUID = 8953218614066651595L;
+	private static final String ACTION_SEARCH_JAVA = "ACTION_SEARCH_JAVA";
+	private static final String ACTION_SEARCH_LAYOUT = "ACTION_SEARCH_LAYOUT";
+	private static final String ACTION_CLEAR_SEARCH = "ACTION_CLEAR_SEARCH";
+	private static final String ACTION_START_EXTRACT = "ACTION_START_EXTRACT";
+	private static final String ACTION_CHECK_STRINGS_XML = "ACTION_CHECK_STRINGS_XML";
 
+	// ================================================
+ 
+	private JLabel labelJavaPath = new JLabel("Java文件所在的根目录");
+	private JTextField textFieldJavaPath = new JTextField(40);
+  
+	private JLabel labelLayoutPath = new JLabel("Layout文件所在的根目录");
+	private JTextField textFieldLayoutPath = new JTextField(40); 
+
+	private JLabel labelStringsPath = new JLabel("strings.xml文件绝对路径");
+	private JTextField textFieldStringsPath = new JTextField(40); 
+
+	private JLabel apiKeyLabel = new JLabel("百度翻译的APIKey");
+	private JTextField apiKeyPathField = new JTextField(40);
+
+	private JButton btnStartSearchJava = new JButton("开始检索Java");
+	private JButton btnStartSearchLayout = new JButton("开始检索Layout");
+	private JButton btnClearSearch = new JButton("清除结果");
+	private JButton btnCheckStringsXML = new JButton("检测strings.xml是否有重复字符串");
+   
+	private JCheckBox cbAllExtract = new JCheckBox("全部抽取");
+ 
+	private JButton btnStartExtract = new JButton("开始抽取");
+ 
+	private JPanel panelCenter = new JPanel();
+	
+	// ================================================
+	
 	// 抽取结果，文件名对应着文件中的行号及该行内容
 	private Map<String, Map<Integer, String>> resultMap = new HashMap<>();
 	// 存入strings.xml中的，使用Set可以保证不重复
 	private Set<String> resultStringsSet = new HashSet<>();
 
-	private boolean isLayoutSearchOver = false;
-	private boolean isJavaSearchOver = false;
-
-	// ================================================
-
-	private JLabel javaPathLabel = new JLabel("Java文件所在的根目录");
-	private JTextField javaPathField = new JTextField(40);
-
-	private JLabel layoutPathLabel = new JLabel("Layout文件所在的根目录");
-	private JTextField layoutPathField = new JTextField(40);
-
-	private JLabel stringsPathLabel = new JLabel("strings.xml文件绝对路径");
-	private JTextField stringsPathField = new JTextField(40);
-
-	private JLabel apiKeyLabel = new JLabel("百度翻译的APIKey");
-	private JTextField apiKeyPathField = new JTextField(40);
-
-	private JButton startSearchButton = new JButton("开始检索");
-
-	private JCheckBox allExtractCheckbox = new JCheckBox("全部抽取");
-
-	private JButton startExtractButton = new JButton("开始抽取");
-
-	// ================================================
-
-	private JPanel centerPanel = new JPanel();
+	private boolean isBeingSearch = false;
 
 	public ExtractStringFrame() throws HeadlessException
 	{
-		super("ExtractAndroidStrings - v1.0");
-		init();
-	}
-
-	public ExtractStringFrame(String title) throws HeadlessException
-	{
-		super(title);
-		init();
+		this("", "", "", "");
 	}
 
 	public ExtractStringFrame(String javaPath, String layoutPath, String stringsPath, String apiKey)
 			throws HeadlessException
 	{
-		super("ExtractAndroidStrings - v1.0");
-		javaPathField.setText(javaPath);
-		layoutPathField.setText(layoutPath);
-		stringsPathField.setText(stringsPath);
+		super("ExtractAndroidStrings - v1.1");
+		textFieldJavaPath.setText(javaPath);
+		textFieldLayoutPath.setText(layoutPath);
+		textFieldStringsPath.setText(stringsPath);
 		apiKeyPathField.setText(apiKey);
 		init();
 	}
@@ -108,10 +108,25 @@ public class ExtractStringFrame extends JFrame
 		// 整个窗体默认的布局是区域布局
 		setLayout(new BorderLayout());
 
-		// 设置监听
-		startSearchButton.addActionListener(new StartSearchBtnListener());
-		startExtractButton.addActionListener(new StartExtractBtnListener());
-		allExtractCheckbox.addItemListener(new AllCheckListener());
+		// 设置监听 
+		BtnListener listener = new BtnListener();
+
+		btnStartSearchJava.setActionCommand(ACTION_SEARCH_JAVA);
+		btnStartSearchJava.addActionListener(listener);
+		
+	 	btnStartSearchLayout.setActionCommand(ACTION_SEARCH_LAYOUT);
+		btnStartSearchLayout.addActionListener(listener);
+		
+		btnClearSearch.setActionCommand(ACTION_CLEAR_SEARCH);
+		btnClearSearch.addActionListener(listener);
+		
+		btnStartExtract.setActionCommand(ACTION_START_EXTRACT);
+		btnStartExtract.addActionListener(listener);
+		
+		btnCheckStringsXML.setActionCommand(ACTION_CHECK_STRINGS_XML);
+		btnCheckStringsXML.addActionListener(listener);
+		
+		cbAllExtract.addItemListener(new AllCheckListener());
 
 		// =============================================================================
 
@@ -125,23 +140,23 @@ public class ExtractStringFrame extends JFrame
 
 		JPanel javaPathPanel = new JPanel();
 		javaPathPanel.setLayout(new BoxLayout(javaPathPanel, BoxLayout.X_AXIS));
-		javaPathLabel.setPreferredSize(dimension);
-		javaPathPanel.add(javaPathLabel);
-		javaPathPanel.add(javaPathField);
+		labelJavaPath.setPreferredSize(dimension);
+		javaPathPanel.add(labelJavaPath);
+		javaPathPanel.add(textFieldJavaPath);
 		northPanel.add(javaPathPanel);
 
 		JPanel layoutPathPanel = new JPanel();
 		layoutPathPanel.setLayout(new BoxLayout(layoutPathPanel, BoxLayout.X_AXIS));
-		layoutPathLabel.setPreferredSize(dimension);
-		layoutPathPanel.add(layoutPathLabel);
-		layoutPathPanel.add(layoutPathField);
+		labelLayoutPath.setPreferredSize(dimension);
+		layoutPathPanel.add(labelLayoutPath);
+		layoutPathPanel.add(textFieldLayoutPath);
 		northPanel.add(layoutPathPanel);
 
 		JPanel stringsPathPanel = new JPanel();
 		stringsPathPanel.setLayout(new BoxLayout(stringsPathPanel, BoxLayout.X_AXIS));
-		stringsPathLabel.setPreferredSize(dimension);
-		stringsPathPanel.add(stringsPathLabel);
-		stringsPathPanel.add(stringsPathField);
+		labelStringsPath.setPreferredSize(dimension);
+		stringsPathPanel.add(labelStringsPath);
+		stringsPathPanel.add(textFieldStringsPath);
 		northPanel.add(stringsPathPanel);
 
 		JPanel apiKeyPanel = new JPanel();
@@ -153,7 +168,10 @@ public class ExtractStringFrame extends JFrame
 
 		// 开始检索按钮
 		JPanel startSearchPanel = new JPanel();
-		startSearchPanel.add(startSearchButton);
+		startSearchPanel.setLayout(new BoxLayout(startSearchPanel, BoxLayout.X_AXIS));
+		startSearchPanel.add(btnStartSearchJava);
+		startSearchPanel.add(btnStartSearchLayout);
+		startSearchPanel.add(btnClearSearch);
 		northPanel.add(startSearchPanel);
 
 		// =========================================
@@ -161,10 +179,10 @@ public class ExtractStringFrame extends JFrame
 		JPanel tipsPanel = new JPanel();
 		tipsPanel.setLayout(new GridLayout(1, 3));
 
-		allExtractCheckbox.setPreferredSize(new Dimension(140, 50));
-		allExtractCheckbox.setSelected(true);
+		cbAllExtract.setPreferredSize(new Dimension(140, 50));
+		cbAllExtract.setSelected(true);
 
-		tipsPanel.add(allExtractCheckbox);
+		tipsPanel.add(cbAllExtract);
 		tipsPanel.add(new JLabel("源字符串"));
 		tipsPanel.add(new JLabel("目标字符串", JLabel.CENTER));
 
@@ -179,14 +197,14 @@ public class ExtractStringFrame extends JFrame
 		 */
 		JScrollPane centerScrollPane = new JScrollPane();
 		centerScrollPane.setLayout(new ScrollPaneLayout());
-		centerPanel.setLayout(new BoxLayout(centerPanel, BoxLayout.Y_AXIS));
+		panelCenter.setLayout(new BoxLayout(panelCenter, BoxLayout.Y_AXIS));
 
 		// for (int i = 0; i < 14; i++)
 		// {
 		// addItem("jhad", 2, "fsjdlf", "fjsado", "fjsdlf");
 		// }
 
-		centerScrollPane.setViewportView(centerPanel);
+		centerScrollPane.setViewportView(panelCenter);
 		this.add(centerScrollPane, BorderLayout.CENTER);
 
 		// ===============================================
@@ -195,7 +213,7 @@ public class ExtractStringFrame extends JFrame
 		 * 底部的开始抽取按钮
 		 */
 		JPanel southPanel = new JPanel();
-		southPanel.add(startExtractButton);
+		southPanel.add(btnStartExtract);
 		this.add(southPanel, BorderLayout.SOUTH);
 
 		// ===============================================
@@ -229,7 +247,7 @@ public class ExtractStringFrame extends JFrame
 		tempPanel.add(new JTextField(replacement, 21), BorderLayout.EAST);
 		tempPanel.setPreferredSize(new Dimension(0, 40));
 		tempPanel.setTag(new ItemInfo(fileNameString, lineNumber, line));
-		centerPanel.add(tempPanel);
+		panelCenter.add(tempPanel);
 	}
 
 	/**
@@ -237,8 +255,15 @@ public class ExtractStringFrame extends JFrame
 	 */
 	private void startSearchLayout()
 	{
-		startSearchButton.setText("正在检索，请稍候...");
-		new Thread(new StartSearchLayoutRunnable()).start();
+		File layoutFile = new File(textFieldLayoutPath.getText());
+		if (!textFieldLayoutPath.getText().isEmpty() && !layoutFile.isDirectory())
+		{
+			showError("请输入正确的Layout文件根目录");
+			return;
+		}
+		
+		btnStartSearchLayout.setText("正在检索，请稍候...");
+		new Thread(new SearchLayoutRunnable()).start();
 	}
 
 	/**
@@ -246,8 +271,51 @@ public class ExtractStringFrame extends JFrame
 	 */
 	private void startSearchJava()
 	{
-		startSearchButton.setText("正在检索，请稍候...");
-		new Thread(new StartSearchJavaRunnable()).start();
+		// 路径错误
+		File javaFile = new File(textFieldJavaPath.getText());
+		if (!textFieldJavaPath.getText().isEmpty() && !javaFile.isDirectory())
+		{
+			showError("请输入正确的Java文件根目录");
+			return;
+		}
+		
+		btnStartSearchJava.setText("正在检索，请稍候...");
+		new Thread(new SearchJavaRunnable()).start();
+	}
+	
+	/**
+	 * 清除掉搜索结果
+	 */
+	private void clearSearch()
+	{
+		panelCenter.removeAll();
+	}
+	
+	/**
+	 * 开始抽取
+	 */
+	private void startExtract()
+	{
+		
+	}
+	
+	/**
+	 * 检测strings.xml文件
+	 */
+	private void checkStringsXML()
+	{
+		if (!textFieldStringsPath.getText().isEmpty() && !new File(textFieldStringsPath.getText()).isFile())
+		{
+			showError("请输入正确的strings文件路径");
+			return;
+		}
+		String s = Utils.getStringsXMLRepeat(textFieldStringsPath.getText());
+		if (s != null)
+		{
+			JOptionPane.showInternalMessageDialog(ExtractStringFrame.this.getContentPane(),
+					"strings.xml中发现有重复的字符串，以下为详细内容\n" + s, "发现重复的字符串", JOptionPane.NO_OPTION);
+			ExtractStringFrame.this.pack();
+		}
 	}
 
 	/**
@@ -256,83 +324,33 @@ public class ExtractStringFrame extends JFrame
 	 * @author Administrator
 	 *
 	 */
-	class StartSearchBtnListener implements ActionListener
+	class BtnListener implements ActionListener
 	{
 
 		@Override
 		public void actionPerformed(ActionEvent e)
 		{
-			if (startSearchButton.getText().contains("正在检索"))
+			if (isBeingSearch)
 			{
 				return;
 			}
-			if (javaPathField.getText().isEmpty() && layoutPathField.getText().isEmpty())
+			switch (e.getActionCommand()) 
 			{
-				JOptionPane.showInternalMessageDialog(ExtractStringFrame.this.getContentPane(),
-						"请至少输入Java或Layout文件任意一个的根目录", "错误提示", JOptionPane.NO_OPTION);
-			} else if (stringsPathField.getText().isEmpty())
-			{
-				JOptionPane.showInternalMessageDialog(ExtractStringFrame.this.getContentPane(),
-						"请输入" + javaPathLabel.getText(), "错误提示", JOptionPane.NO_OPTION);
-			} else if (apiKeyPathField.getText().isEmpty())
-			{
-				JOptionPane.showInternalMessageDialog(ExtractStringFrame.this.getContentPane(),
-						"请输入" + apiKeyLabel.getText(), "错误提示", JOptionPane.NO_OPTION);
-			} else
-			{
-				File javaFile = new File(javaPathField.getText());
-				File layoutFile = new File(layoutPathField.getText());
-				if (!javaPathField.getText().isEmpty() && !javaFile.isDirectory())
-				{
-					JOptionPane.showInternalMessageDialog(ExtractStringFrame.this.getContentPane(), "请输入正确的Java文件根目录",
-							"错误提示", JOptionPane.NO_OPTION);
-					return;
-				}
-				if (!layoutPathField.getText().isEmpty() && !layoutFile.isDirectory())
-				{
-					JOptionPane.showInternalMessageDialog(ExtractStringFrame.this.getContentPane(), "请输入正确的Layout文件根目录",
-							"错误提示", JOptionPane.NO_OPTION);
-					return;
-				}
-				File stringsXMLFile = new File(stringsPathField.getText());
-				if (!stringsPathField.getText().isEmpty() && !stringsXMLFile.isFile())
-				{
-					JOptionPane.showInternalMessageDialog(ExtractStringFrame.this.getContentPane(), "请输入正确的strings文件路径",
-							"错误提示", JOptionPane.NO_OPTION);
-					return;
-				}
-				// TODO 开始抽取，先检测strings.xml是否有重复的字符串
-				centerPanel.removeAll();
-				resultMap.clear();
-				String s = Utils.getStringsXMLRepeat(stringsPathField.getText());
-				if (s != null)
-				{
-					JOptionPane.showInternalMessageDialog(ExtractStringFrame.this.getContentPane(),
-							"strings.xml中发现有重复的字符串，以下为详细内容\n" + s, "发现重复的字符串", JOptionPane.NO_OPTION);
-					ExtractStringFrame.this.pack();
-				} else
-				{
-					if (!javaPathField.getText().isEmpty() && !layoutPathField.getText().isEmpty())
-					{
-						startSearchJava();
-						startSearchLayout();
-						isJavaSearchOver = false;
-						isLayoutSearchOver = false;
-					} else
-					{
-						if (!javaPathField.getText().isEmpty())
-						{
-							startSearchJava();
-							isJavaSearchOver = false;
-							isLayoutSearchOver = true;
-						} else if (!layoutPathField.getText().isEmpty())
-						{
-							startSearchLayout();
-							isLayoutSearchOver = false;
-							isJavaSearchOver = true;
-						}
-					}
-				}
+			case ACTION_CLEAR_SEARCH:
+				clearSearch();
+				break;
+			case ACTION_SEARCH_JAVA:
+				startSearchJava();
+				break;
+			case ACTION_SEARCH_LAYOUT:
+				startSearchLayout();
+				break;
+			case ACTION_START_EXTRACT:
+				startExtract();
+				break;
+			case ACTION_CHECK_STRINGS_XML:
+				checkStringsXML();
+				break;
 			}
 		}
 	}
@@ -346,27 +364,25 @@ public class ExtractStringFrame extends JFrame
 		@Override
 		public void actionPerformed(ActionEvent e)
 		{
-			File stringsXMLFile = new File(stringsPathField.getText());
-			if (!stringsPathField.getText().isEmpty() && !stringsXMLFile.isFile())
+			File stringsXMLFile = new File(textFieldStringsPath.getText());
+			if (!textFieldStringsPath.getText().isEmpty() && !stringsXMLFile.isFile())
 			{
 				JOptionPane.showInternalMessageDialog(ExtractStringFrame.this.getContentPane(), "请输入正确的strings文件路径",
 						"错误提示", JOptionPane.NO_OPTION);
 				return;
 			}
 			// 如果滑动面板中没有项，就提示
-			if (centerPanel.getComponentCount() == 0)
+			if (panelCenter.getComponentCount() == 0)
 			{
 				JOptionPane.showInternalMessageDialog(ExtractStringFrame.this.getContentPane(), "没有可以抽取的字符串", "温馨提示",
 						JOptionPane.NO_OPTION);
 			} else
 			{
 				resultStringsSet.clear();
-				isJavaSearchOver = false;
-				isLayoutSearchOver = false;
 
-				for (int i = 0; i < centerPanel.getComponentCount(); i++)
+				for (int i = 0; i < panelCenter.getComponentCount(); i++)
 				{
-					CustomJPanel jPanel = (CustomJPanel) centerPanel.getComponent(i);
+					CustomJPanel jPanel = (CustomJPanel) panelCenter.getComponent(i);
 					ItemInfo fileInfo = (ItemInfo) jPanel.getTag();
 					JCheckBox jCheckBox = (JCheckBox) jPanel.getComponent(0);
 					JLabel jLabel = (JLabel) jPanel.getComponent(1);
@@ -455,7 +471,7 @@ public class ExtractStringFrame extends JFrame
 					} // while End
 					builder.setLength(0);
 					BufferedReader reader = new BufferedReader(
-							new InputStreamReader(new FileInputStream(stringsPathField.getText())));
+							new InputStreamReader(new FileInputStream(textFieldStringsPath.getText())));
 					String line = null;
 					while ((line = reader.readLine()) != null)
 					{
@@ -477,7 +493,7 @@ public class ExtractStringFrame extends JFrame
 					reader.close();
 
 					BufferedWriter writer = new BufferedWriter(
-							new OutputStreamWriter(new FileOutputStream(stringsPathField.getText())));
+							new OutputStreamWriter(new FileOutputStream(textFieldStringsPath.getText())));
 					writer.write(builder.toString());
 					writer.flush();
 					writer.close();
@@ -488,7 +504,7 @@ public class ExtractStringFrame extends JFrame
 				{
 					e1.printStackTrace();
 				}
-				centerPanel.removeAll();
+				panelCenter.removeAll();
 				ExtractStringFrame.this.pack();
 				JOptionPane.showInternalMessageDialog(ExtractStringFrame.this.getContentPane(), "抽取完成", "温馨提示",
 						JOptionPane.NO_OPTION);
@@ -496,37 +512,13 @@ public class ExtractStringFrame extends JFrame
 		}
 	}
 
-	/**
-	 * 全部抽取
-	 * 
-	 * @author Administrator
-	 *
-	 */
-	class AllCheckListener implements ItemListener
-	{
-
-		@Override
-		public void itemStateChanged(ItemEvent e)
-		{
-			JCheckBox jcb = (JCheckBox) e.getItem();
-			// 循环面板中的每一行
-			for (int i = 0; i < centerPanel.getComponentCount(); i++)
-			{
-				// 强制转换为JPanel
-				JPanel j = (JPanel) centerPanel.getComponent(i);
-				JCheckBox checkBox = (JCheckBox) j.getComponent(0);
-				checkBox.setSelected(jcb.isSelected());
-			}
-		}
-	}
-
-	private class StartSearchLayoutRunnable implements Runnable
+	private class SearchLayoutRunnable implements Runnable
 	{
 		@Override
 		public void run()
 		{
 			// 取得所有文件的对象
-			final List<File> files = Utils.getAllFile(Paths.get(layoutPathField.getText()));
+			final List<File> files = Utils.getAllFile(Paths.get(textFieldLayoutPath.getText()));
 
 			Pattern textPattern = Pattern.compile("android:text=\"(.*?)\"");
 			Pattern hintPattern = Pattern.compile("android:hint=\"(.*?)\"");
@@ -548,6 +540,10 @@ public class ExtractStringFrame extends JFrame
 						Matcher hintMatcher = null;
 						while ((readLine = reader.readLine()) != null)
 						{
+							if (readLine.trim().startsWith("<!--")) // 注释不抽取
+							{
+								continue;
+							}
 							textMatcher = textPattern.matcher(readLine);
 							hintMatcher = hintPattern.matcher(readLine);
 							// 在xml中，一行只可能有一个字符串
@@ -591,39 +587,34 @@ public class ExtractStringFrame extends JFrame
 				}
 			} // for End
 
-			isLayoutSearchOver = true;
-
 			ExtractStringFrame.this.pack();
 
-			if (isJavaSearchOver)
+			btnStartSearchJava.setText("开始检索");
+			// 如果检索后发现面板数量依然为0，说明没有找到可以抽取的
+			if (panelCenter.getComponentCount() == 0)
 			{
-				startSearchButton.setText("开始检索");
-				// 如果检索后发现面板数量依然为0，说明没有找到可以抽取的
-				if (centerPanel.getComponentCount() == 0)
+				JOptionPane.showInternalMessageDialog(ExtractStringFrame.this.getContentPane(),
+						"Layout文件中未发现可以抽取的字符串", "检索结果", JOptionPane.NO_OPTION);
+			} else
+			{
+				// 取得屏幕的高度，如果Frame的高度大于等于屏幕的高度，则根据屏幕高度动态设置Frame高度
+				Dimension screensize = Toolkit.getDefaultToolkit().getScreenSize();
+				int height = (int) screensize.getHeight();
+				if (ExtractStringFrame.this.getHeight() >= height)
 				{
-					JOptionPane.showInternalMessageDialog(ExtractStringFrame.this.getContentPane(),
-							"Layout文件中未发现可以抽取的字符串", "检索结果", JOptionPane.NO_OPTION);
-				} else
-				{
-					// 取得屏幕的高度，如果Frame的高度大于等于屏幕的高度，则根据屏幕高度动态设置Frame高度
-					Dimension screensize = Toolkit.getDefaultToolkit().getScreenSize();
-					int height = (int) screensize.getHeight();
-					if (ExtractStringFrame.this.getHeight() >= height)
-					{
-						ExtractStringFrame.this.setSize(ExtractStringFrame.this.getWidth(), (int) (height / 1.3));
-					}
+					ExtractStringFrame.this.setSize(ExtractStringFrame.this.getWidth(), (int) (height / 1.3));
 				}
 			}
 		}
 	}
-
-	private class StartSearchJavaRunnable implements Runnable
+ 
+	private class SearchJavaRunnable implements Runnable
 	{
 		@Override
 		public void run()
 		{
 			// 取得所有文件的对象
-			final List<File> files = Utils.getAllFile(Paths.get(javaPathField.getText()));
+			final List<File> files = Utils.getAllFile(Paths.get(textFieldJavaPath.getText()));
 
 			// 通过正则，找出所有被双引号""包含的字符串
 			Pattern pattern = Pattern.compile("\"(.*?)\"");
@@ -687,30 +678,55 @@ public class ExtractStringFrame extends JFrame
 				}
 			} // for End
 
-			isJavaSearchOver = true;
-
 			ExtractStringFrame.this.pack();
 
-			if (isLayoutSearchOver)
+			btnStartSearchJava.setText("开始检索");
+			// 如果检索后发现面板数量依然为0，说明没有找到可以抽取的
+			if (panelCenter.getComponentCount() == 0)
 			{
-				startSearchButton.setText("开始检索");
-				// 如果检索后发现面板数量依然为0，说明没有找到可以抽取的
-				if (centerPanel.getComponentCount() == 0)
+				JOptionPane.showInternalMessageDialog(ExtractStringFrame.this.getContentPane(),
+						"Java文件中未发现可以抽取的字符串", "检索结果", JOptionPane.NO_OPTION);
+			} else
+			{
+				// 取得屏幕的高度，如果Frame的高度大于等于屏幕的高度，则根据屏幕高度动态设置Frame高度
+				Dimension screensize = Toolkit.getDefaultToolkit().getScreenSize();
+				int height = (int) screensize.getHeight();
+				if (ExtractStringFrame.this.getHeight() >= height)
 				{
-					JOptionPane.showInternalMessageDialog(ExtractStringFrame.this.getContentPane(),
-							"Java文件中未发现可以抽取的字符串", "检索结果", JOptionPane.NO_OPTION);
-				} else
-				{
-					// 取得屏幕的高度，如果Frame的高度大于等于屏幕的高度，则根据屏幕高度动态设置Frame高度
-					Dimension screensize = Toolkit.getDefaultToolkit().getScreenSize();
-					int height = (int) screensize.getHeight();
-					if (ExtractStringFrame.this.getHeight() >= height)
-					{
-						ExtractStringFrame.this.setSize(ExtractStringFrame.this.getWidth(), (int) (height / 1.3));
-					}
+					ExtractStringFrame.this.setSize(ExtractStringFrame.this.getWidth(), (int) (height / 1.3));
 				}
 			}
 		}
+	}
+	
+	/**
+	 * 全部抽取或全部抽取
+	 * 
+	 * @author Administrator
+	 *
+	 */
+	class AllCheckListener implements ItemListener
+	{
+
+		@Override
+		public void itemStateChanged(ItemEvent e)
+		{
+			JCheckBox jcb = (JCheckBox) e.getItem();
+			// 循环面板中的每一行
+			for (int i = 0; i < panelCenter.getComponentCount(); i++)
+			{
+				// 强制转换为JPanel
+				JPanel j = (JPanel) panelCenter.getComponent(i);
+				JCheckBox checkBox = (JCheckBox) j.getComponent(0);
+				checkBox.setSelected(jcb.isSelected());
+			}
+		}
+	}
+	
+	private void showError(String msg)
+	{
+		JOptionPane.showInternalMessageDialog(ExtractStringFrame.this.getContentPane(),
+				msg, "错误提示", JOptionPane.NO_OPTION);
 	}
 
 	/**
