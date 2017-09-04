@@ -63,6 +63,8 @@ public class ExtractStringFrame extends JFrame
 
 	private JLabel labelStringsPath = new JLabel("strings.xml文件绝对路径");
 	private JTextField textFieldStringsPath = new JTextField(40); 
+	private JLabel lableAppGetString = new JLabel("App Context getString");
+	private JTextField textFieldAppGetString = new JTextField(40); 
 
 	private JLabel apiKeyLabel = new JLabel("百度翻译的APIKey");
 	private JTextField apiKeyPathField = new JTextField(40);
@@ -89,16 +91,17 @@ public class ExtractStringFrame extends JFrame
 
 	public ExtractStringFrame() throws HeadlessException
 	{
-		this("", "", "", "");
+		this("", "", "", "", "");
 	}
 
-	public ExtractStringFrame(String javaPath, String layoutPath, String stringsPath, String apiKey)
+	public ExtractStringFrame(String javaPath, String layoutPath, String stringsPath, String appContextGetString, String apiKey)
 			throws HeadlessException
 	{
 		super("ExtractAndroidStrings - v1.1");
 		textFieldJavaPath.setText(javaPath);
 		textFieldLayoutPath.setText(layoutPath);
 		textFieldStringsPath.setText(stringsPath);
+		textFieldAppGetString.setText(appContextGetString);
 		apiKeyPathField.setText(apiKey);
 		init();
 	}
@@ -133,7 +136,7 @@ public class ExtractStringFrame extends JFrame
 		/*
 		 * 顶部的面板
 		 */
-		Dimension dimension = new Dimension(150, 40);
+		Dimension dimension = new Dimension(180, 40);
 
 		JPanel northPanel = new JPanel();
 		northPanel.setLayout(new BoxLayout(northPanel, BoxLayout.Y_AXIS));
@@ -158,6 +161,13 @@ public class ExtractStringFrame extends JFrame
 		stringsPathPanel.add(labelStringsPath);
 		stringsPathPanel.add(textFieldStringsPath);
 		northPanel.add(stringsPathPanel);
+		 
+		JPanel appGetStringPathPanel = new JPanel();
+		appGetStringPathPanel.setLayout(new BoxLayout(appGetStringPathPanel, BoxLayout.X_AXIS));
+		lableAppGetString.setPreferredSize(dimension);
+		appGetStringPathPanel.add(lableAppGetString);
+		appGetStringPathPanel.add(textFieldAppGetString);
+		northPanel.add(appGetStringPathPanel);
 
 		JPanel apiKeyPanel = new JPanel();
 		apiKeyPanel.setLayout(new BoxLayout(apiKeyPanel, BoxLayout.X_AXIS));
@@ -172,6 +182,7 @@ public class ExtractStringFrame extends JFrame
 		startSearchPanel.add(btnStartSearchJava);
 		startSearchPanel.add(btnStartSearchLayout);
 		startSearchPanel.add(btnClearSearch);
+		startSearchPanel.add(btnCheckStringsXML);
 		northPanel.add(startSearchPanel);
 
 		// =========================================
@@ -199,10 +210,10 @@ public class ExtractStringFrame extends JFrame
 		centerScrollPane.setLayout(new ScrollPaneLayout());
 		panelCenter.setLayout(new BoxLayout(panelCenter, BoxLayout.Y_AXIS));
 
-		// for (int i = 0; i < 14; i++)
-		// {
-		// addItem("jhad", 2, "fsjdlf", "fjsado", "fjsdlf");
-		// }
+//		 for (int i = 0; i < 2; i++)
+//		 {
+//		 addItem("jhad", 2, "fsjdlf", "fjsado", "fjsdlf");
+//		 }
 
 		centerScrollPane.setViewportView(panelCenter);
 		this.add(centerScrollPane, BorderLayout.CENTER);
@@ -263,7 +274,88 @@ public class ExtractStringFrame extends JFrame
 		}
 		
 		btnStartSearchLayout.setText("正在检索，请稍候...");
-		new Thread(new SearchLayoutRunnable()).start();
+		
+		// 取得所有文件的对象
+		final List<File> files = Utils.getAllFile(Paths.get(textFieldLayoutPath.getText()));
+
+		Pattern textPattern = Pattern.compile("android:text=\"(.*?)\"");
+		Pattern hintPattern = Pattern.compile("android:hint=\"(.*?)\"");
+
+		// 循环遍历所有的文件
+		for (File file : files)
+		{
+			// 是文件并且是xml文件
+			if (file.isFile() && file.getName().endsWith(".xml"))
+			{
+				// 查找此文件中可以抽取的字符串
+				try
+				{
+					// 一行一行的读取
+					LineNumberReader reader = new LineNumberReader(
+							new InputStreamReader(new FileInputStream(file)));
+					String readLine = null;
+					while ((readLine = reader.readLine()) != null)
+					{
+						if (readLine.trim().startsWith("<!--")) // 注释不抽取
+						{
+							continue;
+						}
+						if (!CharUtil.isChinese(readLine)) // 不是中文不抽取
+						{
+							continue;
+						}
+						extractLayoutString(file.getAbsolutePath(), reader.getLineNumber(), readLine, textPattern.matcher(readLine));
+						extractLayoutString(file.getAbsolutePath(), reader.getLineNumber(), readLine, hintPattern.matcher(readLine));
+					}
+					reader.close();
+				} catch (Exception e)
+				{
+					e.printStackTrace();
+				}
+			}
+		} // for End
+
+		ExtractStringFrame.this.pack();
+
+		btnStartSearchJava.setText("开始检索Layout");
+		result();
+	}
+
+	private void result() {
+		// 如果检索后发现面板数量依然为0，说明没有找到可以抽取的
+		if (panelCenter.getComponentCount() == 0)
+		{
+			showError("未发现可以抽取的字符串");
+		} else
+		{
+			// 取得屏幕的高度，如果Frame的高度大于等于屏幕的高度，则根据屏幕高度动态设置Frame高度
+			Dimension screensize = Toolkit.getDefaultToolkit().getScreenSize();
+			int height = (int) screensize.getHeight();
+			if (ExtractStringFrame.this.getHeight() >= height)
+			{
+				ExtractStringFrame.this.setSize(ExtractStringFrame.this.getWidth(), (int) (height / 1.3));
+			}
+		}
+	}
+ 
+	private void extractLayoutString(String absolutePath, int lineNum, String readLine, Matcher textMatcher) {
+		// 在xml中，一行只可能有一个字符串
+		if (textMatcher.find())
+		{
+			String matchingString = textMatcher.group(1);// 取出双引号内的
+			// 是否可以抽取
+			if (matchingString != null && !matchingString.equals("")
+					&& !matchingString.startsWith("@string/"))
+			{
+				String translationString = Utils.baiduTranslation(apiKeyPathField.getText(),
+						matchingString);
+				if (translationString != null)
+				{
+					addItem(absolutePath, lineNum, readLine,
+							matchingString, translationString);
+				}
+			}
+		}
 	}
 
 	/**
@@ -280,7 +372,71 @@ public class ExtractStringFrame extends JFrame
 		}
 		
 		btnStartSearchJava.setText("正在检索，请稍候...");
-		new Thread(new SearchJavaRunnable()).start();
+		
+		// 取得所有文件的对象
+		final List<File> files = Utils.getAllFile(Paths.get(textFieldJavaPath.getText()));
+
+		// 通过正则，找出所有被双引号""包含的字符串
+		Pattern pattern = Pattern.compile("\"(.*?)\"");
+
+		for (File file : files)
+		{
+			// 是文件并且是java文件
+			if (file.isFile() && file.getName().endsWith(".java"))
+			{
+				try
+				{
+					// 一行一行的读取
+					LineNumberReader reader = new LineNumberReader(
+							new InputStreamReader(new FileInputStream(file)));
+					String readLine = null;
+					while ((readLine = reader.readLine()) != null)
+					{
+						// 找出被双引号包含起来的字符串
+						Matcher matcher = pattern.matcher(readLine);
+						while (matcher.find())
+						{
+							// 判断字符串是否有可以抽取的地方
+							if (!isLineExtract(readLine))
+							{
+								continue;
+							}
+							String matchingString = matcher.group();
+							// 去掉双引号后的源字符串
+							String sourceString = matchingString.substring(1, matchingString.length() - 1);
+							// 这个字符串不抽取就略过
+							if (!isSourceExtract(sourceString))
+							{
+								continue;
+							}
+
+							String translationString = Utils.baiduTranslation(apiKeyPathField.getText(),
+									sourceString);
+							if (translationString != null)
+							{
+								addItem(file.getAbsolutePath(), reader.getLineNumber(), readLine, sourceString,
+										translationString);
+							} else
+							{
+								System.out.println(sourceString);
+							}
+						}
+					}
+					reader.close();
+				} catch (FileNotFoundException e)
+				{
+					e.printStackTrace();
+				} catch (IOException e)
+				{
+					e.printStackTrace();
+				}
+			}
+		} // for End
+
+		ExtractStringFrame.this.pack();
+
+		btnStartSearchJava.setText("开始检索");
+		result();
 	}
 	
 	/**
@@ -289,6 +445,7 @@ public class ExtractStringFrame extends JFrame
 	private void clearSearch()
 	{
 		panelCenter.removeAll();
+		ExtractStringFrame.this.pack();
 	}
 	
 	/**
@@ -296,7 +453,153 @@ public class ExtractStringFrame extends JFrame
 	 */
 	private void startExtract()
 	{
-		
+		File stringsXMLFile = new File(textFieldStringsPath.getText());
+		if (!textFieldStringsPath.getText().isEmpty() && !stringsXMLFile.isFile())
+		{
+			JOptionPane.showInternalMessageDialog(ExtractStringFrame.this.getContentPane(), "请输入正确的strings文件路径",
+					"错误提示", JOptionPane.NO_OPTION);
+			return;
+		}
+		// 如果滑动面板中没有项，就提示
+		if (panelCenter.getComponentCount() == 0)
+		{
+			JOptionPane.showInternalMessageDialog(ExtractStringFrame.this.getContentPane(), "没有可以抽取的字符串", "温馨提示",
+					JOptionPane.NO_OPTION);
+		} else
+		{
+			resultStringsSet.clear();
+
+			// 循环结果面板，一条一条
+			for (int i = 0; i < panelCenter.getComponentCount(); i++)
+			{
+				CustomJPanel jPanel = (CustomJPanel) panelCenter.getComponent(i);
+				ItemInfo fileInfo = (ItemInfo) jPanel.getTag();
+				JCheckBox jCheckBox = (JCheckBox) jPanel.getComponent(0);
+				JLabel jLabel = (JLabel) jPanel.getComponent(1);
+				JTextField jTextField = (JTextField) jPanel.getComponent(2);
+
+				// 如果选择了抽取，并且文本框内不为空，则抽取
+				if (jCheckBox.isSelected() && !jTextField.getText().isEmpty())
+				{
+					// 文件已存在，取出对应的行号集合。行号不存在才添加
+					if (resultMap.containsKey(fileInfo.getFilePath()))
+					{
+						// 取出文件对应的行号集合
+						Map<Integer, String> tempMap = resultMap.get(fileInfo.getFilePath());
+						if (!tempMap.containsKey(fileInfo.getLineNumber()))
+						{
+							if (fileInfo.getFilePath().endsWith(".java"))
+							{
+								tempMap.put(fileInfo.getLineNumber(), fileInfo.getLine().replace(jLabel.getText(),
+										textFieldAppGetString.getText() + 
+										"(R.string." + jTextField.getText() + ")"));
+							} else if (fileInfo.getFilePath().endsWith(".xml"))
+							{
+								tempMap.put(fileInfo.getLineNumber(), fileInfo.getLine().replace(jLabel.getText(),
+										"@string/" + jTextField.getText()));
+							}
+							resultStringsSet.add("<string name=\"" + jTextField.getText() + "\">" + jLabel.getText()
+									+ "</string>");
+						}
+					}
+					// 文件不存在，新建行号集合
+					else
+					{
+						Map<Integer, String> tempMap = new HashMap<>();
+						if (fileInfo.getFilePath().endsWith(".java"))
+						{
+							tempMap.put(fileInfo.getLineNumber(), fileInfo.getLine().replace(jLabel.getText(),
+									"getString(R.string." + jTextField.getText() + ")"));
+						} else if (fileInfo.getFilePath().endsWith(".xml"))
+						{
+							tempMap.put(fileInfo.getLineNumber(), fileInfo.getLine().replace(jLabel.getText(),
+									"@string/" + jTextField.getText()));
+						}
+						resultMap.put(fileInfo.getFilePath(), tempMap);
+						resultStringsSet.add(
+								"<string name=\"" + jTextField.getText() + "\">" + jLabel.getText() + "</string>");
+					}
+				}
+			} // for End
+			try
+			{
+				StringBuilder builder = new StringBuilder();
+
+				Set<String> resultSet = resultMap.keySet();
+				Iterator<String> resultIterator = resultSet.iterator();
+				while (resultIterator.hasNext())
+				{
+					builder.setLength(0);
+					// 取出文件名称，操作文件
+					String filePath = resultIterator.next();
+
+					Map<Integer, String> lineNumberMap = resultMap.get(filePath);
+
+					// 一行一行的读出来，如果当前行在行号map中，那么替换当前行为map中的行
+					LineNumberReader reader = new LineNumberReader(
+							new InputStreamReader(new FileInputStream(filePath)));
+					String line = null;
+					while ((line = reader.readLine()) != null)
+					{
+						if (lineNumberMap.containsKey(reader.getLineNumber()))
+						{
+							builder.append(lineNumberMap.get(reader.getLineNumber()));
+							builder.append(System.getProperty("line.separator"));
+						} else
+						{
+							builder.append(line);
+							builder.append(System.getProperty("line.separator"));
+						}
+					}
+					reader.close();
+
+					BufferedWriter writer = new BufferedWriter(
+							new OutputStreamWriter(new FileOutputStream(filePath)));
+					writer.write(builder.toString());
+					writer.flush();
+					writer.close();
+
+				} // while End
+				builder.setLength(0);
+				BufferedReader reader = new BufferedReader(
+						new InputStreamReader(new FileInputStream(textFieldStringsPath.getText())));
+				String line = null;
+				while ((line = reader.readLine()) != null)
+				{
+					if (!line.contains("</resources>")) // 如果没有读到结尾，就继续，当读到结尾了，就把新内容添加进去
+					{
+						builder.append(line);
+						builder.append(System.getProperty("line.separator"));
+					} else
+					{
+						for (String string : resultStringsSet)
+						{
+							builder.append(string);
+							builder.append(System.getProperty("line.separator"));
+						}
+						builder.append("</resources>");
+						break;
+					}
+				}
+				reader.close();
+
+				BufferedWriter writer = new BufferedWriter(
+						new OutputStreamWriter(new FileOutputStream(textFieldStringsPath.getText())));
+				writer.write(builder.toString());
+				writer.flush();
+				writer.close();
+			} catch (FileNotFoundException e1)
+			{
+				e1.printStackTrace();
+			} catch (IOException e1)
+			{
+				e1.printStackTrace();
+			}
+			panelCenter.removeAll();
+			ExtractStringFrame.this.pack();
+			JOptionPane.showInternalMessageDialog(ExtractStringFrame.this.getContentPane(), "抽取完成", "温馨提示",
+					JOptionPane.NO_OPTION);
+		}
 	}
 	
 	/**
@@ -319,7 +622,7 @@ public class ExtractStringFrame extends JFrame
 	}
 
 	/**
-	 * 开始检索
+	 * 按钮监听
 	 * 
 	 * @author Administrator
 	 *
@@ -356,351 +659,7 @@ public class ExtractStringFrame extends JFrame
 	}
 
 	/**
-	 * 开始抽取
-	 */
-	class StartExtractBtnListener implements ActionListener
-	{
-
-		@Override
-		public void actionPerformed(ActionEvent e)
-		{
-			File stringsXMLFile = new File(textFieldStringsPath.getText());
-			if (!textFieldStringsPath.getText().isEmpty() && !stringsXMLFile.isFile())
-			{
-				JOptionPane.showInternalMessageDialog(ExtractStringFrame.this.getContentPane(), "请输入正确的strings文件路径",
-						"错误提示", JOptionPane.NO_OPTION);
-				return;
-			}
-			// 如果滑动面板中没有项，就提示
-			if (panelCenter.getComponentCount() == 0)
-			{
-				JOptionPane.showInternalMessageDialog(ExtractStringFrame.this.getContentPane(), "没有可以抽取的字符串", "温馨提示",
-						JOptionPane.NO_OPTION);
-			} else
-			{
-				resultStringsSet.clear();
-
-				for (int i = 0; i < panelCenter.getComponentCount(); i++)
-				{
-					CustomJPanel jPanel = (CustomJPanel) panelCenter.getComponent(i);
-					ItemInfo fileInfo = (ItemInfo) jPanel.getTag();
-					JCheckBox jCheckBox = (JCheckBox) jPanel.getComponent(0);
-					JLabel jLabel = (JLabel) jPanel.getComponent(1);
-					JTextField jTextField = (JTextField) jPanel.getComponent(2);
-
-					// 如果选择了抽取，并且文本框内不为空，则抽取
-					if (jCheckBox.isSelected() && !jTextField.getText().isEmpty())
-					{
-						// 文件已存在，取出对应的行号集合。行号不存在才添加
-						if (resultMap.containsKey(fileInfo.getFilePath()))
-						{
-							// 取出文件对应的行号集合
-							Map<Integer, String> tempMap = resultMap.get(fileInfo.getFilePath());
-							if (!tempMap.containsKey(fileInfo.getLineNumber()))
-							{
-								if (fileInfo.getFilePath().endsWith(".java"))
-								{
-									tempMap.put(fileInfo.getLineNumber(), fileInfo.getLine().replace(jLabel.getText(),
-											"getString(R.string." + jTextField.getText() + ")"));
-								} else if (fileInfo.getFilePath().endsWith(".xml"))
-								{
-									tempMap.put(fileInfo.getLineNumber(), fileInfo.getLine().replace(jLabel.getText(),
-											"@string/" + jTextField.getText()));
-								}
-								resultStringsSet.add("<string name=\"" + jTextField.getText() + "\">" + jLabel.getText()
-										+ "</string>");
-							}
-						}
-						// 文件不存在，新建行号集合
-						else
-						{
-							Map<Integer, String> tempMap = new HashMap<>();
-							if (fileInfo.getFilePath().endsWith(".java"))
-							{
-								tempMap.put(fileInfo.getLineNumber(), fileInfo.getLine().replace(jLabel.getText(),
-										"getString(R.string." + jTextField.getText() + ")"));
-							} else if (fileInfo.getFilePath().endsWith(".xml"))
-							{
-								tempMap.put(fileInfo.getLineNumber(), fileInfo.getLine().replace(jLabel.getText(),
-										"@string/" + jTextField.getText()));
-							}
-							resultMap.put(fileInfo.getFilePath(), tempMap);
-							resultStringsSet.add(
-									"<string name=\"" + jTextField.getText() + "\">" + jLabel.getText() + "</string>");
-						}
-					}
-				} // for End
-				try
-				{
-					StringBuilder builder = new StringBuilder();
-
-					Set<String> resultSet = resultMap.keySet();
-					Iterator<String> resultIterator = resultSet.iterator();
-					while (resultIterator.hasNext())
-					{
-						builder.setLength(0);
-						// 取出文件名称，操作文件
-						String filePath = resultIterator.next();
-
-						Map<Integer, String> lineNumberMap = resultMap.get(filePath);
-
-						// 一行一行的读出来，如果当前行在行号map中，那么替换当前行为map中的行
-						LineNumberReader reader = new LineNumberReader(
-								new InputStreamReader(new FileInputStream(filePath)));
-						String line = null;
-						while ((line = reader.readLine()) != null)
-						{
-							if (lineNumberMap.containsKey(reader.getLineNumber()))
-							{
-								builder.append(lineNumberMap.get(reader.getLineNumber()));
-								builder.append(System.getProperty("line.separator"));
-							} else
-							{
-								builder.append(line);
-								builder.append(System.getProperty("line.separator"));
-							}
-						}
-						reader.close();
-
-						BufferedWriter writer = new BufferedWriter(
-								new OutputStreamWriter(new FileOutputStream(filePath)));
-						writer.write(builder.toString());
-						writer.flush();
-						writer.close();
-
-					} // while End
-					builder.setLength(0);
-					BufferedReader reader = new BufferedReader(
-							new InputStreamReader(new FileInputStream(textFieldStringsPath.getText())));
-					String line = null;
-					while ((line = reader.readLine()) != null)
-					{
-						if (!line.contains("</resources>")) // 如果没有读到结尾，就继续，当读到结尾了，就把新内容添加进去
-						{
-							builder.append(line);
-							builder.append(System.getProperty("line.separator"));
-						} else
-						{
-							for (String string : resultStringsSet)
-							{
-								builder.append(string);
-								builder.append(System.getProperty("line.separator"));
-							}
-							builder.append("</resources>");
-							break;
-						}
-					}
-					reader.close();
-
-					BufferedWriter writer = new BufferedWriter(
-							new OutputStreamWriter(new FileOutputStream(textFieldStringsPath.getText())));
-					writer.write(builder.toString());
-					writer.flush();
-					writer.close();
-				} catch (FileNotFoundException e1)
-				{
-					e1.printStackTrace();
-				} catch (IOException e1)
-				{
-					e1.printStackTrace();
-				}
-				panelCenter.removeAll();
-				ExtractStringFrame.this.pack();
-				JOptionPane.showInternalMessageDialog(ExtractStringFrame.this.getContentPane(), "抽取完成", "温馨提示",
-						JOptionPane.NO_OPTION);
-			}
-		}
-	}
-
-	private class SearchLayoutRunnable implements Runnable
-	{
-		@Override
-		public void run()
-		{
-			// 取得所有文件的对象
-			final List<File> files = Utils.getAllFile(Paths.get(textFieldLayoutPath.getText()));
-
-			Pattern textPattern = Pattern.compile("android:text=\"(.*?)\"");
-			Pattern hintPattern = Pattern.compile("android:hint=\"(.*?)\"");
-
-			// 循环遍历所有的文件
-			for (File file : files)
-			{
-				// 是文件并且是xml文件
-				if (file.isFile() && file.getName().endsWith(".xml"))
-				{
-					// 查找此文件中可以抽取的字符串
-					try
-					{
-						// 一行一行的读取
-						LineNumberReader reader = new LineNumberReader(
-								new InputStreamReader(new FileInputStream(file)));
-						String readLine = null;
-						Matcher textMatcher = null;
-						Matcher hintMatcher = null;
-						while ((readLine = reader.readLine()) != null)
-						{
-							if (readLine.trim().startsWith("<!--")) // 注释不抽取
-							{
-								continue;
-							}
-							textMatcher = textPattern.matcher(readLine);
-							hintMatcher = hintPattern.matcher(readLine);
-							// 在xml中，一行只可能有一个字符串
-							if (textMatcher.find())
-							{
-								String matchingString = textMatcher.group(1);// 取出双引号内的
-								// 是否可以抽取
-								if (matchingString != null && !matchingString.equals("")
-										&& !matchingString.startsWith("@string/"))
-								{
-									String translationString = Utils.baiduTranslation(apiKeyPathField.getText(),
-											matchingString);
-									if (translationString != null)
-									{
-										addItem(file.getAbsolutePath(), reader.getLineNumber(), readLine,
-												matchingString, translationString);
-									}
-								}
-							}
-							if (hintMatcher.find())
-							{
-								String matchingString = hintMatcher.group(1);
-								if (matchingString != null && !matchingString.equals("")
-										&& !matchingString.startsWith("@string/"))
-								{
-									String translationString = Utils.baiduTranslation(apiKeyPathField.getText(),
-											matchingString);
-									if (translationString != null)
-									{
-										addItem(file.getAbsolutePath(), reader.getLineNumber(), readLine,
-												matchingString, translationString);
-									}
-								}
-							}
-						}
-						reader.close();
-					} catch (Exception e)
-					{
-						e.printStackTrace();
-					}
-				}
-			} // for End
-
-			ExtractStringFrame.this.pack();
-
-			btnStartSearchJava.setText("开始检索");
-			// 如果检索后发现面板数量依然为0，说明没有找到可以抽取的
-			if (panelCenter.getComponentCount() == 0)
-			{
-				JOptionPane.showInternalMessageDialog(ExtractStringFrame.this.getContentPane(),
-						"Layout文件中未发现可以抽取的字符串", "检索结果", JOptionPane.NO_OPTION);
-			} else
-			{
-				// 取得屏幕的高度，如果Frame的高度大于等于屏幕的高度，则根据屏幕高度动态设置Frame高度
-				Dimension screensize = Toolkit.getDefaultToolkit().getScreenSize();
-				int height = (int) screensize.getHeight();
-				if (ExtractStringFrame.this.getHeight() >= height)
-				{
-					ExtractStringFrame.this.setSize(ExtractStringFrame.this.getWidth(), (int) (height / 1.3));
-				}
-			}
-		}
-	}
- 
-	private class SearchJavaRunnable implements Runnable
-	{
-		@Override
-		public void run()
-		{
-			// 取得所有文件的对象
-			final List<File> files = Utils.getAllFile(Paths.get(textFieldJavaPath.getText()));
-
-			// 通过正则，找出所有被双引号""包含的字符串
-			Pattern pattern = Pattern.compile("\"(.*?)\"");
-
-			for (File file : files)
-			{
-				// 是文件并且是java文件
-				if (file.isFile() && file.getName().endsWith(".java"))
-				{
-					try
-					{
-						// 如果不是有效文件就略过
-						if (!Utils.isValidJavaFile(file))
-						{
-							continue;
-						}
-						// 一行一行的读取
-						LineNumberReader reader = new LineNumberReader(
-								new InputStreamReader(new FileInputStream(file)));
-						String readLine = null;
-						while ((readLine = reader.readLine()) != null)
-						{
-							// 找出被双引号包含起来的字符串
-							Matcher matcher = pattern.matcher(readLine);
-							if (matcher.find())
-							{
-								// 判断字符串是否有可以抽取的地方
-								if (!isLineExtract(readLine))
-								{
-									continue;
-								}
-								String matchingString = matcher.group();
-								// 去掉双引号后的源字符串
-								String sourceString = matchingString.substring(1, matchingString.length() - 1);
-								// 这个字符串不抽取就略过
-								if (!isSourceExtract(sourceString))
-								{
-									continue;
-								}
-
-								String translationString = Utils.baiduTranslation(apiKeyPathField.getText(),
-										sourceString);
-								if (translationString != null)
-								{
-									addItem(file.getAbsolutePath(), reader.getLineNumber(), readLine, matchingString,
-											translationString);
-								} else
-								{
-									System.out.println(sourceString);
-								}
-							}
-						}
-						reader.close();
-					} catch (FileNotFoundException e)
-					{
-						e.printStackTrace();
-					} catch (IOException e)
-					{
-						e.printStackTrace();
-					}
-				}
-			} // for End
-
-			ExtractStringFrame.this.pack();
-
-			btnStartSearchJava.setText("开始检索");
-			// 如果检索后发现面板数量依然为0，说明没有找到可以抽取的
-			if (panelCenter.getComponentCount() == 0)
-			{
-				JOptionPane.showInternalMessageDialog(ExtractStringFrame.this.getContentPane(),
-						"Java文件中未发现可以抽取的字符串", "检索结果", JOptionPane.NO_OPTION);
-			} else
-			{
-				// 取得屏幕的高度，如果Frame的高度大于等于屏幕的高度，则根据屏幕高度动态设置Frame高度
-				Dimension screensize = Toolkit.getDefaultToolkit().getScreenSize();
-				int height = (int) screensize.getHeight();
-				if (ExtractStringFrame.this.getHeight() >= height)
-				{
-					ExtractStringFrame.this.setSize(ExtractStringFrame.this.getWidth(), (int) (height / 1.3));
-				}
-			}
-		}
-	}
-	
-	/**
-	 * 全部抽取或全部抽取
+	 * 全部抽取或全部不抽取
 	 * 
 	 * @author Administrator
 	 *
@@ -735,10 +694,11 @@ public class ExtractStringFrame extends JFrame
 	 * @param line
 	 * @return false代表不抽取
 	 */
-	static boolean isLineExtract(String line)
+	static boolean isLineExtract(String lineString)
 	{
-		if (line.trim().startsWith("Log.") || line.trim().startsWith("System.out.") || line.trim().startsWith("//")
-				|| line.trim().startsWith("* ") || line.trim().startsWith("System.err."))
+		String line = lineString.trim();
+		if (line.startsWith("Log.") || line.startsWith("System.out.") || line.startsWith("//")
+				|| line.startsWith("* ") || line.startsWith("System.err.") || line.startsWith("throw new"))
 		{
 			return false;
 		} else
@@ -754,11 +714,12 @@ public class ExtractStringFrame extends JFrame
 	 *            即将抽取的旧内容
 	 * @return false代表不抽取
 	 */
-	static boolean isSourceExtract(String source)
+	static boolean isSourceExtract(String sourceString)
 	{
+		String source = sourceString.trim();
 		// 如果不包含中文，或者是###开头，或者是空字符串，或者是（）？，那么不抽取
-		if (!CharUtil.isChinese(source) || source.trim().startsWith("###") || source.equals("") || source.equals("（")
-				|| source.equals("）") || source.equals("？"))
+		if (!CharUtil.isChinese(source) || source.startsWith("###") || source.equals("") || source.equals("（")
+				|| source.equals("）") || source.equals("？") || source.equals("，") || source.equals("："))
 		{
 			return false;
 		} else

@@ -1,16 +1,18 @@
 package com.sxisa.yyq;
 
-import com.sxisa.utils.Utils;
+import com.sxisa.utils.C;
 
 public class Main
 {
 	public static void main(String[] args)
 	{
 		new ExtractStringFrame(
-				"E:/AndroidStudio/Test/app/src/main/java",
-//				 "",
-				"E:/AndroidStudio/Test/app/src/main/res/layout",
-				"E:/AndroidStudio/Test/app/src/main/res/values/strings.xml", "20160907000028349");
+				
+				C.JAVA_PATH,
+				C.LAYOUT_PATH,
+				C.STRINGS_PATH, 
+				"BaseApp.getString",
+				C.BAIDU_API_KEY);
 //		 System.out.println(Utils.baiduTranslation("20160907000028349",
 //				 "你好"));
 	}
