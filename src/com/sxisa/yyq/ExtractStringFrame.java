@@ -3,7 +3,6 @@ package com.sxisa.yyq;
 import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.Dimension;
-import java.awt.GridLayout;
 import java.awt.HeadlessException;
 import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
@@ -39,6 +38,7 @@ import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
+import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.ScrollPaneLayout;
 
@@ -49,32 +49,34 @@ import com.sxisa.utils.Utils;
 public class ExtractStringFrame extends JFrame
 {
 	private static final long serialVersionUID = 8953218614066651595L;
-	private static final String ACTION_SEARCH_JAVA = "ACTION_SEARCH_JAVA";
-	private static final String ACTION_SEARCH_LAYOUT = "ACTION_SEARCH_LAYOUT";
-	private static final String ACTION_CLEAR_SEARCH = "ACTION_CLEAR_SEARCH";
-	private static final String ACTION_START_EXTRACT = "ACTION_START_EXTRACT";
-	private static final String ACTION_CHECK_STRINGS_XML = "ACTION_CHECK_STRINGS_XML";
 
 	// ================================================
  
-	private JLabel labelJavaPath = new JLabel("Java文件所在的根目录");
+	private JLabel labelJavaPath = new JLabel("Java 文件根目录");
 	private JTextField textFieldJavaPath = new JTextField(40);
   
-	private JLabel labelLayoutPath = new JLabel("Layout文件所在的根目录");
+	private JLabel labelLayoutPath = new JLabel("Layout 文件根目录");
 	private JTextField textFieldLayoutPath = new JTextField(40); 
 
-	private JLabel labelStringsPath = new JLabel("strings.xml文件绝对路径");
+	private JLabel labelStringsPath = new JLabel("strings.xml 绝对路径");
 	private JTextField textFieldStringsPath = new JTextField(40); 
-	private JLabel lableAppGetString = new JLabel("App Context getString");
+	private JLabel labelEnStringsPath = new JLabel("英文 strings.xml 绝对路径");
+	private JTextField textFieldEnStringsPath = new JTextField(40); 
+
+	private JLabel lableAppGetString = new JLabel("Application Context getString");
 	private JTextField textFieldAppGetString = new JTextField(40); 
 
 	private JLabel apiKeyLabel = new JLabel("百度翻译的APIKey");
 	private JTextField apiKeyPathField = new JTextField(40);
+	
+	private JTextArea jtaResult = new JTextArea();
 
 	private JButton btnStartSearchJava = new JButton("开始检索Java");
 	private JButton btnStartSearchLayout = new JButton("开始检索Layout");
 	private JButton btnClearSearch = new JButton("清除结果");
 	private JButton btnCheckStringsXML = new JButton("检测strings.xml是否有重复字符串");
+	private JButton btnCheckEnStringsXML = new JButton("查看英文strings.xml是否有中文字符串");
+	private JButton btnGetNoTranslate = new JButton("取出未翻译成英文的");
    
 	private JCheckBox cbAllExtract = new JCheckBox("全部抽取");
  
@@ -93,16 +95,17 @@ public class ExtractStringFrame extends JFrame
 
 	public ExtractStringFrame() throws HeadlessException
 	{
-		this("", "", "", "", "");
+		this("", "", "", "", "", "");
 	}
 
-	public ExtractStringFrame(String javaPath, String layoutPath, String stringsPath, String appContextGetString, String apiKey)
+	public ExtractStringFrame(String javaPath, String layoutPath, String stringsPath, String stringsEnPath, String appContextGetString, String apiKey)
 			throws HeadlessException
 	{
 		super("ExtractAndroidStrings - v1.1");
 		textFieldJavaPath.setText(javaPath);
 		textFieldLayoutPath.setText(layoutPath);
 		textFieldStringsPath.setText(stringsPath);
+		textFieldEnStringsPath.setText(stringsEnPath);
 		textFieldAppGetString.setText(appContextGetString);
 		apiKeyPathField.setText(apiKey);
 		init();
@@ -116,20 +119,19 @@ public class ExtractStringFrame extends JFrame
 		// 设置监听 
 		BtnListener listener = new BtnListener();
 
-		btnStartSearchJava.setActionCommand(ACTION_SEARCH_JAVA);
 		btnStartSearchJava.addActionListener(listener);
 		
-	 	btnStartSearchLayout.setActionCommand(ACTION_SEARCH_LAYOUT);
 		btnStartSearchLayout.addActionListener(listener);
 		
-		btnClearSearch.setActionCommand(ACTION_CLEAR_SEARCH);
 		btnClearSearch.addActionListener(listener);
 		
-		btnStartExtract.setActionCommand(ACTION_START_EXTRACT);
 		btnStartExtract.addActionListener(listener);
 		
-		btnCheckStringsXML.setActionCommand(ACTION_CHECK_STRINGS_XML);
 		btnCheckStringsXML.addActionListener(listener);
+		
+		btnCheckEnStringsXML.addActionListener(listener);
+		
+		btnGetNoTranslate.addActionListener(listener);
 		
 		cbAllExtract.addItemListener(new AllCheckListener());
 
@@ -138,7 +140,7 @@ public class ExtractStringFrame extends JFrame
 		/*
 		 * 顶部的面板
 		 */
-		Dimension dimension = new Dimension(180, 40);
+		Dimension dimension = new Dimension(180, 50);
 
 		JPanel northPanel = new JPanel();
 		northPanel.setLayout(new BoxLayout(northPanel, BoxLayout.Y_AXIS));
@@ -163,6 +165,13 @@ public class ExtractStringFrame extends JFrame
 		stringsPathPanel.add(labelStringsPath);
 		stringsPathPanel.add(textFieldStringsPath);
 		northPanel.add(stringsPathPanel);
+		
+		JPanel stringsEnPathPanel = new JPanel();
+		stringsEnPathPanel.setLayout(new BoxLayout(stringsEnPathPanel, BoxLayout.X_AXIS));
+		labelEnStringsPath.setPreferredSize(dimension);
+		stringsEnPathPanel.add(labelEnStringsPath);
+		stringsEnPathPanel.add(textFieldEnStringsPath);
+		northPanel.add(stringsEnPathPanel);
 		 
 		JPanel appGetStringPathPanel = new JPanel();
 		appGetStringPathPanel.setLayout(new BoxLayout(appGetStringPathPanel, BoxLayout.X_AXIS));
@@ -177,6 +186,12 @@ public class ExtractStringFrame extends JFrame
 		apiKeyPanel.add(apiKeyLabel);
 		apiKeyPanel.add(apiKeyPathField);
 		northPanel.add(apiKeyPanel);
+		
+		JPanel panelResult = new JPanel();
+		panelResult.setLayout(new BoxLayout(panelResult, BoxLayout.X_AXIS));
+		apiKeyLabel.setPreferredSize(dimension);
+		panelResult.add(jtaResult);
+		northPanel.add(panelResult);
 
 		// 开始检索按钮
 		JPanel startSearchPanel = new JPanel();
@@ -185,6 +200,8 @@ public class ExtractStringFrame extends JFrame
 		startSearchPanel.add(btnStartSearchLayout);
 		startSearchPanel.add(btnClearSearch);
 		startSearchPanel.add(btnCheckStringsXML);
+		startSearchPanel.add(btnCheckEnStringsXML);
+		startSearchPanel.add(btnGetNoTranslate);
 		northPanel.add(startSearchPanel);
 
 		// =========================================
@@ -223,7 +240,6 @@ public class ExtractStringFrame extends JFrame
 		this.setVisible(true);
 		this.setLocation(500, 100);
 		this.pack();
-		this.setResizable(false);
 		this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 	}
 
@@ -416,7 +432,8 @@ public class ExtractStringFrame extends JFrame
 										translationString);
 							} else
 							{
-								System.out.println(sourceString);
+								addItem(file.getAbsolutePath(), file.getName(), reader.getLineNumber(), readLine, sourceString,
+										sourceString);
 							}
 						}
 					}
@@ -626,6 +643,22 @@ public class ExtractStringFrame extends JFrame
 		}
 	}
 	
+	private void checkEnStringsXML()
+	{
+		if (!textFieldEnStringsPath.getText().isEmpty() && !new File(textFieldEnStringsPath.getText()).isFile())
+		{
+			showError("请输入正确的英文strings文件路径");
+			return;
+		}
+		String s = Utils.getEnStringsXMLChinese(textFieldEnStringsPath.getText());
+		if (s != null)
+		{
+			JOptionPane.showInternalMessageDialog(ExtractStringFrame.this.getContentPane(),
+					"以下为详细内容\n" + s, "提示，英文strings.xml中发现有中文", JOptionPane.NO_OPTION);
+			ExtractStringFrame.this.pack();
+		}
+	}
+	
 	/**
 	 * 按钮监听
 	 * 
@@ -642,25 +675,105 @@ public class ExtractStringFrame extends JFrame
 			{
 				return;
 			}
-			switch (e.getActionCommand()) 
+			if (e.getSource() == btnClearSearch)
 			{
-			case ACTION_CLEAR_SEARCH:
 				clearSearch();
-				break;
-			case ACTION_SEARCH_JAVA:
+			}
+			else if (e.getSource() == btnStartSearchJava)
+			{
 				startSearchJava();
-				break;
-			case ACTION_SEARCH_LAYOUT:
+			} else if (e.getSource() == btnStartSearchLayout)
+			{
 				startSearchLayout();
-				break;
-			case ACTION_START_EXTRACT:
+			} else if (e.getSource() == btnStartExtract)
+			{
 				startExtract();
-				break;
-			case ACTION_CHECK_STRINGS_XML:
+			} else if (e.getSource() == btnCheckStringsXML)
+			{
 				checkStringsXML();
-				break;
+			}
+			else if (e.getSource() == btnCheckEnStringsXML)
+			{
+				checkEnStringsXML();
+			}
+			else if (e.getSource() == btnGetNoTranslate)
+			{
+				getNoTranslate();
 			}
 		}
+
+	}
+	
+	private void getNoTranslate()
+	{
+		final List<String> M_LIST = new ArrayList<>();
+		String cn = textFieldStringsPath.getText();
+		String en = textFieldEnStringsPath.getText();
+		
+		Map<String, String> cnNameMap = getMap(cn); // 取得name和每一行的string
+		 Map<String, String> enNameMap = getMap(en);
+
+		for (String string : cnNameMap.keySet()) // 循环中文strings.xml name
+		{
+			if (!enNameMap.containsKey(string)) // 不包含表示不在en中
+			{
+				M_LIST.add(cnNameMap.get(string));
+			}
+		}
+		
+		StringBuilder builder = new StringBuilder();
+		
+		// 格式化输出
+		String format = "<!-- %s -->";
+		String regex = "<string name=(.*?)>(.*?)</string>";
+		Pattern pattern = Pattern.compile(regex);
+		for (String string : M_LIST)
+		{
+			Matcher matcher = pattern.matcher(string);
+			if (matcher.find())
+			{
+				String result = matcher.group(2);
+				builder.append(String.format(format, result));
+				builder.append("\n");
+				builder.append(string);
+				builder.append("\n");
+			}
+		}
+		
+		jtaResult.setText(builder.toString());
+		pack();
+	}
+	
+	// 取得name和value
+	private static Map<String, String> getMap(String fileName)
+	{
+		Map<String, String> map = new HashMap<>();
+
+		String regex = "<string name=(.*?)>(.*?)</string>";
+		Pattern pattern = Pattern.compile(regex);
+
+		try
+		{
+			BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(fileName)));
+			String line = null;
+			while ((line = reader.readLine()) != null)
+			{
+				if (line.trim().startsWith("<!--"))
+				{
+					continue;
+				}
+				Matcher matcher = pattern.matcher(line);
+				if (matcher.find())
+				{
+					map.put(matcher.group(1), line);
+				}
+			}
+			reader.close();
+		} catch (IOException e)
+		{
+			e.printStackTrace();
+		}
+		return map;
 	}
 
 	/**

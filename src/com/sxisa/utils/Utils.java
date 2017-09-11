@@ -171,4 +171,39 @@ public class Utils
 		}
 		return null;
 	}
+	
+	public static String getEnStringsXMLChinese(String xmlFileName)
+	{
+		String regex = "<string name=\"(.*?)\">(.*?)</string>";
+		try (LineNumberReader reader = new LineNumberReader(new InputStreamReader(new FileInputStream(xmlFileName)));)
+		{
+			StringBuilder builder = new StringBuilder();
+
+			String line = null;
+			Pattern pattern = Pattern.compile(regex);
+			while ((line = reader.readLine()) != null)
+			{
+				// 取出一行中的指定字符串数据
+				Matcher matcher = pattern.matcher(line);
+				if (matcher.find())
+				{
+					String string = matcher.group(2);
+					if (CharUtil.isChinese(string))
+					{
+						builder.append(string + "，\t行号：" + reader.getLineNumber());
+						builder.append("\n");
+					}
+				}
+			}
+
+			return builder.toString();
+		} catch (FileNotFoundException e)
+		{
+			e.printStackTrace();
+		} catch (IOException e)
+		{
+			e.printStackTrace();
+		}
+		return null;
+	}
 }
